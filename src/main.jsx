@@ -5,14 +5,37 @@ import {Input} from './Input.jsx'
 class Main extends React.Component {
 	constructor(props) {
 		super(props)
-		this.state = {
-			items: [{
+		const items = JSON.parse(window.localStorage.getItem("items")) || [[{
 				value: "hello",
 				state: -1 // -1 is undecided, 0 is reject, and 1 is keep
-			}],
+			}]]
+		this.state = {
+			tab: 0,
+			items,
 			review: false,
 			selected: 0
 		}
+	}
+	
+	componentDidUpdate(prevProps, prevState) {
+		if (this.state.tab === prevState.tab && this.state.review === prevState.review && this.state.selected === prevState.selected) {
+			window.localStorage.setItem("items", JSON.stringify(this.state.items))
+		}
+	}
+	
+	addTab() {
+		const items = this.state.items
+		let tab = items.length
+		items.push([{
+				value: "hello",
+				state: -1 // -1 is undecided, 0 is reject, and 1 is keep
+			}]
+		)
+		this.setState({items, tab})
+	}
+	
+	changeTab(i) {
+		this.setState({tab: i})
 	}
 	
 	review() {
@@ -27,7 +50,7 @@ class Main extends React.Component {
 	
 	handleChange(i, e) {
 		const items = this.state.items
-		items[i] = {value: e.target.value, state: -1}
+		items[this.state.tab][i] = {value: e.target.value, state: -1}
 		this.setState({items})
 	}
 	
@@ -38,7 +61,7 @@ class Main extends React.Component {
 	handleEnter(i, e) {
 		if (e.key == "Enter") {
 			const items = this.state.items
-			items.splice(i + 1, 0, {value: "", state: -1})
+			items[this.state.tab].splice(i + 1, 0, {value: "", state: -1})
 			const selected = i + 1
 			this.setState({items, selected})
 		} else if (i > 0 && e.key == "ArrowUp") {
@@ -51,7 +74,8 @@ class Main extends React.Component {
 	}
 	
 	runLyricToss(defaultVal) {
-		const items = this.state.items.map(item => {
+		const items = this.state.items
+		items[this.state.tab] = items[this.state.tab].map(item => {
 			if (item.state == -1) {
 				item.state = defaultVal
 			}
@@ -68,16 +92,26 @@ class Main extends React.Component {
 	
 	render() {
 		return (<div>
+			<ul className="nav nav-tabs">
+				{this.state.items.map((_, i) => 
+					<li className="nav-item"><a className={`nav-link ${i === this.state.tab ? "active" : ""}`} onClick={this.changeTab.bind(this, i)}>Song {i}</a></li>
+				)}
+			</ul>
 			<div style={{overflowY: "auto", maxHeight: "72vh"}}>
-			{this.state.items.map((item, i) => 
-				<Input handleChange={this.handleChange.bind(this, i)} key={i} index={i} handleEnter={this.handleEnter.bind(this, i)} handleClick={this.handleClick.bind(this, i)}value={item} review={this.state.review} handleDecision={this.handleLyricDecision.bind(this, i)} selected={this.state.selected}/>
+			{this.state.items[this.state.tab].map((item, i) => 
+				<Input handleChange={this.handleChange.bind(this, i)} key={i} index={i} handleEnter={this.handleEnter.bind(this, i)} handleClick={this.handleClick.bind(this, i)} value={item} review={this.state.review} handleDecision={this.handleLyricDecision.bind(this, i)} selected={this.state.selected}/>
 			)}
 			</div>
 			<div style={{position: "absolute", bottom: "0", width: "100%", marginBottom: "0.3em", marginLeft: "0.3em", maxHeight: "12vh"}}>
-				<hr/>
 				{ this.state.review 
-					? <div><button onClick={this.runLyricToss.bind(this, 0)} className="btn btn-outline-danger" style={{marginRight: "1em"}}>Reject All Remaining</button><button onClick={this.runLyricToss.bind(this, 1)} className="btn btn-outline-success">Accept All Remaining</button></div>
-					: <button className="btn btn-outline-primary" onClick={this.review.bind(this)}>Review</button>
+					? <div>
+						<button onClick={this.runLyricToss.bind(this, 0)} className="btn btn-outline-danger" style={{marginRight: "1em"}}>Reject All Remaining</button>
+						<button onClick={this.runLyricToss.bind(this, 1)} className="btn btn-outline-success">Accept All Remaining</button>
+					</div>
+					: <div>
+						<button className="btn btn-outline-primary" onClick={this.review.bind(this)}>Review</button>
+						<button className="btn btn-outline-success" onClick={this.addTab.bind(this)}>Add New Tab</button>
+					</div>
 				}
 				
 			</div>
